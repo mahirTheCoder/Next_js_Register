@@ -1,0 +1,140 @@
+"use client";
+import React, { useState } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+import Cookies from "js-cookie";
+
+const LoginPage = () => {
+  const router = useRouter();
+  const [form, setForm] = useState({
+    email: "",
+    password: "",
+  });
+
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState("");
+
+  const handleChange = (e) => {
+    setForm({
+      ...form,
+      [e.target.name]: e.target.value,
+    });
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setMessage("");
+
+    const url = "https://api.freeapi.app/api/v1/users/login";
+
+    try {
+      const response = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email: form.email,
+          password: form.password,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        // Set auth token in cookie with 1 minute expiry
+        Cookies.set("authToken", data.data.token, { expires: 1/1440 }); // 1/1440 of a day = 1 minute
+        setMessage("Login successful! Redirecting...");
+        
+        // Save user data
+        localStorage.setItem("userData", JSON.stringify(data.data.user));
+        
+        // Redirect after showing success message
+        setTimeout(() => {
+          router.push("/dashboard"); // Change this to your dashboard route
+        }, 1500);
+      } else {
+        setMessage(data.message || "Login failed");
+      }
+    } catch (error) {
+      console.error(error);
+      setMessage("Something went wrong. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gray-100">
+      <div className="w-full max-w-md bg-white shadow-lg rounded-2xl p-8">
+        <h1 className="text-2xl font-bold text-center mb-6 text-gray-800">
+          Login
+        </h1>
+
+        <form onSubmit={handleSubmit} className="space-y-5">
+          {/* Email */}
+          <div>
+            <label className="block text-sm font-medium text-gray-600 mb-1">
+              Email Address
+            </label>
+            <input
+              type="email"
+              name="email"
+              value={form.email}
+              onChange={handleChange}
+              placeholder="Enter your email"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+              required
+            />
+          </div>
+
+          {/* Password */}
+          <div>
+            <label className="block text-sm font-medium text-gray-600 mb-1">
+              Password
+            </label>
+            <input
+              type="password"
+              name="password"
+              value={form.password}
+              onChange={handleChange}
+              placeholder="Enter your password"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+              required
+            />
+          </div>
+
+          {/* Submit Button */}
+          <button
+            type="submit"
+            disabled={loading}
+            className={`w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg py-2 transition-all ${
+              loading && "opacity-50 cursor-not-allowed"
+            }`}
+          >
+            {loading ? "Logging in..." : "Login"}
+          </button>
+        </form>
+
+        {/* Response Message */}
+        {message && (
+          <p className={`mt-4 text-center text-sm font-medium ${
+            message.includes("successful") ? "text-green-600" : "text-red-600"
+          }`}>
+            {message}
+          </p>
+        )}
+
+        <p className="text-center text-sm text-gray-500 mt-5">
+          Don&apos;t have an account?{" "}
+          <Link href="/Register" className="text-blue-600 hover:underline">
+            Register
+          </Link>
+        </p>
+      </div>
+    </div>
+  );
+};
+
+export default LoginPage;
